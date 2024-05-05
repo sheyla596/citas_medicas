@@ -1,0 +1,64 @@
+
+import express from "express"; 
+import axios from "axios";
+import _ from "lodash";
+import chalk from "chalk";
+import moment from "moment";
+import { v4 as uuidv4 } from "uuid";
+
+type Usuario = {
+  nombre: string;
+  apellido: string;
+  genero: string;
+  id: string;
+  tiempo: string;
+};
+
+const app = express();
+const port = 3000;
+const apiUrl = "https://randomuser.me/api/";
+const usuarios: Usuario[] = [];
+const formato = "MMMM Do YYYY: hh:mm:ss a";
+
+app.listen(port, () => {
+  console.log(`El servidor está inicializado en el puerto http://localhost:${port}`);
+});
+
+app.get("/usuarios", async (req, res) => {
+  try {
+    const userApi = await axios.get(apiUrl);
+
+    const data = userApi.data.results[0];
+    const nombre = userApi.data.results[0].name.first;
+    const apellido = userApi.data.results[0].name.last;
+    const genero = userApi.data.results[0].gender;
+    const id = uuidv4().slice(0, 6);
+    const tiempo = moment().format(formato);
+    usuarios.push({ nombre, apellido, genero, id, tiempo });
+    const pacientesXGenero = _.partition(usuarios, (user) => {
+      return user.genero === "female";
+    });
+    const template = `
+<h5>Mujeres</h5>
+<ol>
+${pacientesXGenero[0].map((user) => {
+  return `<li>Nombre: ${user.nombre} - Apellido: ${user.apellido} - Id: ${user.id} - Hora: ${user.tiempo}</li>`;
+})}
+</ol>
+<h5>Hombres</h5>
+<ol>
+${pacientesXGenero[1].map((user) => {
+  return `<li>Nombre: ${user.nombre} - Apellido: ${user.apellido} - Id: ${user.id} - Hora: ${user.tiempo}</li>`;
+})}
+</ol>
+`;
+    console.log(
+      chalk.blue.bgWhite(
+        `Nombre: ${nombre} - Apellido: ${apellido} - Id: ${id} - Hora: ${tiempo}\n Nombre: ${nombre} - Apellido: ${apellido} - Id: ${id} - Hora: ${tiempo}`
+      )
+    );
+    res.send(template);
+  } catch (error) {
+    console.log("Archivo no visualizado" + error);
+  }
+});
